@@ -1,135 +1,92 @@
+# H.264 Motion Vector Capture
 
-<h1 align="center">
-    <a href="https://github.com/LukasBommes/mv-extractor" target="blank_">
-        <img width="250" alt="mvextractor" src="logo.svg" />
-    </a>
-    <br>
-    Motion Vector Extractor
-</h1>
-
-This tool extracts frames, motion vectors, frame types and timestamps from H.264 and MPEG-4 Part 2 encoded videos.
-
-This class is a replacement for OpenCV's [VideoCapture](https://docs.opencv.org/4.1.0/d8/dfe/classcv_1_1VideoCapture.html) and can be used to read and decode video frames from a H.264 or MPEG-4 Part 2 encoded video stream/file. It returns the following values for each frame:
-- decoded frame as BGR image
-- motion vectors
+This class is a replacement for OpenCV's [VideoCapture](https://docs.opencv.org/4.1.0/d8/dfe/classcv_1_1VideoCapture.html) and can be used to read and decode video frames from a video stream. Special about it is, that it returns additional values for each frame:
+- H.264 motion vectors
 - Frame type (keyframe, P- or B-frame)
 - (for RTSP streams): UTC wall time of the moment the sender sent out a frame (as opposed to an easily retrievable timestamp for the frame reception)
 
 These additional features enable further projects, such as fast visual object tracking or synchronization of multiple RTSP streams. Both a C++ and a Python API is provided. Under the hood [FFMPEG](https://github.com/FFmpeg/FFmpeg) is used.
 
-The image below shows a video frame with extracted motion vectors overlaid,
+The image below shows a snapshot of a video frame with extracted motion vectors overlaid,
 
 ![motion_vector_demo_image](mvs.png)
 
-A usage example can be found in `extract_mvs.py`.
+A usage example can be found in `video_cap_test.py`.
 
 
-## News
+## Installation
 
-### Recent Changes
+Prebuild binaries are not available. The library needs to be installed and build from source following the instructions below.
 
-- Provided PyPI package
-- Added unittests in `tests/tests.py`
-- Updated for compatibility with Python >3.8
-- Provided a script to wrap Docker run command
-- Updated demo script with command line arguments for extraction and storing of motion vectors
-- Changed Docker image to manylinux_2_24_x86_64 to prepare for building wheels
+<details>
+  <summary>Installation on host (Ubuntu 18.04)</summary>
 
-### Looking for Contributors
-
-The mv-extractor seems to be quite popular and I want to improve it. However, I do not have the time and resources to do this alone. Hence, I gladly welcome any community contributions.
-
-
-## Quickstart
-
-### Step 1: Install
-
-You can install the motion vector extractor via pip
+Install wget and git
 ```
-pip install --upgrade pip
-pip install motion-vector-extractor
+apt-get update && apt-get install -y wget git
 ```
-Note, that we currently provide the package only for x86-64 linux, such as Ubuntu or Debian, and Python 3.8, 3.9, and 3.10. If you are on a different platform, please use the Docker image as described [below](#installation-via-docker).
+Clone the git repository and run the installer script for installing dependencies
+```
+mkdir -p /home && cd home && \
+git clone https://sfmt-auto:Ow36ODbBoSSezciC@github.com/LukasBommes/h264-videocap.git video_cap && \
+cd video_cap && \
+chmod +x install.sh && \
+./install.sh
+```
+Set environment variables (to permanently store them, append to `~/.profile` and source `~/.profile`)
+```
+export PATH="$PATH:$/home/bin"
+export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/home/ffmpeg_build/lib/pkgconfig"
+```
+Compile the source and make the python wrapper
+```
+cd /home/video_cap && python3 setup.py install
+```
+</details>
 
-### Step 2: Extract Motion Vectors
+<details>
+  <summary>Installation in Docker image</summary>
 
-Download the example video `vid_h264.mp4` from the repo and place it somewhere. To extract the motion vectors, open a terminal at the same location and run
 ```
-extract_mvs vid_h264.mp4 --preview --verbose
-```
+FROM ubuntu:18.04
 
-The extraction script provides command line options to store extracted motion vectors to disk, and to enable/disable graphical output. For all options type
+RUN apt-get update && \
+  apt-get install -y \
+    wget \
+    git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Build h264-videocap from source
+RUN mkdir -p /home && cd home && \
+  git clone https://sfmt-auto:Ow36ODbBoSSezciC@github.com/LukasBommes/h264-videocap.git video_cap && \
+  cd video_cap && \
+  chmod +x install.sh && \
+  ./install.sh
+
+# Set environment variables
+ENV PATH="$PATH:/home/bin"
+ENV PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/home/ffmpeg_build/lib/pkgconfig"
+
+RUN cd /home/video_cap && \
+  python3 setup.py install
+
+WORKDIR /home
+
+CMD ["sh", "-c", "tail -f /dev/null"]
+
 ```
-extract_mvs -h
-``` 
-For example, to store extracted frames and motion vectors to disk without showing graphical output run
-```
-extract_mvs vid_h264.mp4 --dump
-```
+</details>
 
 
-## Advanced Usage
+## Usage
 
-### Run Tests
+For a usage example of the library refer to `video_cap_test.py`. To run the example, type
+```
+python3 video_cap_test.py
+```
+A GUI window should open and show an example video including extracted motion vectors. When running in a container, type `xhost +` on the host to allow access to the host's xserver.
 
-Before you can run the tests, clone the source code. To this end, change into the desired installation directory on your machine and run
-```
-git clone https://github.com/LukasBommes/mv-extractor.git mv_extractor
-```
-
-Now, to run the tests from the `mv_extractor` directory with
-```
-python3 tests/tests.py
-```
-Confirm that all tests pass.
-
-If you are using the Docker image instead of the PyPI package as explained below, you can invoke the tests with
-```
-sudo ./run.sh python3.10 tests/tests.py
-```
-
-### Importing mvextractor into Your Own Scripts
-
-If you want to use the motion vector extractor in your own Python script import it via
-```
-from mvextractor.videocap import VideoCap
-```
-You can then use it according to the example in `extract_mvs.py`.
-
-Generally, a video file is opened by `VideoCap.open()` and frames, motion vectors, frame types and timestamps are read by calling `VideoCap.read()` repeatedly. Before exiting the program, the video file has to be closed by `VideoCap.release()`. For a more detailed explanation see the API documentation below.
-
-### Installation via Docker
-
-Instead of installing the motion vector extractor via PyPI you can also use the prebuild Docker image from [DockerHub](https://hub.docker.com/r/lubo1994/mv-extractor). The Docker image contains the motion vector extractor and all its dependencies and comes in handy for quick testing or in case your platform is not compatible with the provided Python package.
-
-#### Prerequisites
-
-To use the Docker image you need to install [Docker](https://docs.docker.com/). Furthermore, you need to clone the source code with
-```
-git clone https://github.com/LukasBommes/mv-extractor.git mv_extractor
-```
-
-#### Run Motion Vector Extraction in Docker
-
-Afterwards, you can run the extraction script in the `mv_extractor` directory as follows
-```
-sudo ./run.sh python3.10 extract_mvs.py vid_h264.mp4 --preview --verbose
-```
-This pulls the prebuild Docker image from DockerHub and runs the extraction script inside the Docker container.
-
-#### Building the Docker Image Locally (Optional)
- 
-This step is not required and for faster installation, we recommend using the prebuilt image.
-If you still want to build the Docker image locally, you can do so by running the following command in the `mv_extractor` directory
-```
-sudo docker build . --tag=mv-extractor
-```
-Note that building can take more than one hour.
-
-Now, run the docker container with
-```
-sudo docker run -it --ipc=host --env="DISPLAY" -v $(pwd):/home/video_cap -v /tmp/.X11-unix:/tmp/.X11-unix:rw mv-extractor /bin/bash
-```
+In the example a H.264 encoded video file is opened by `VideoCap.open()` and frames, motion vectors, frame types and timestamps are read by calling `VideoCap.read()` repeatedly. Extracted motion vectors are drawn onto the video frame (see image above). Before exiting the program, the video file is closed by `VideoCap.release()`.
 
 
 ## Python API
@@ -182,8 +139,8 @@ Takes no input arguments and returns a tuple with the elements described in the 
 | Index | Name | Type | Description |
 | --- | --- | --- | --- |
 | 0 | success | bool | True in case the frame and motion vectors could be retrieved sucessfully, false otherwise or in case the end of stream is reached. When false, the other tuple elements are set to empty numpy arrays or 0. |
-| 1 | frame | numpy array | Array of dtype uint8 shape (h, w, 3) containing the decoded video frame. w and h are the width and height of this frame in pixels. Channels are in BGR order. If no frame could be decoded an empty numpy ndarray of shape (0, 0, 3) and dtype uint8 is returned. |
-| 2 | motion vectors | numpy array | Array of dtype int64 and shape (N, 10) containing the N motion vectors of the frame. Each row of the array corresponds to one motion vector. If no motion vectors are present in a frame, e.g. if the frame is an `I` frame an empty numpy array of shape (0, 10) and dtype int64 is returned. The columns of each vector have the following meaning (also refer to [AVMotionVector](https://ffmpeg.org/doxygen/4.1/structAVMotionVector.html) in FFMPEG documentation): <br>- 0: source: Offset of the reference frame from the current frame. The reference frame is the frame where the motion vector points to and where the corresponding macroblock comes from. If source < 0, the reference frame is in the past. For s > 0 the it is in the future (in display order).<br>- 3: src_x: x-location (in pixels) where the motion vector points to in the reference frame.<br>- 4: src_y: y-location (in pixels) where the motion vector points to in the reference frame.<br>- 5: dst_x: x-location of the vector's origin in the current frame (in pixels). Corresponds to the x-center coordinate of the correspdoning macroblock.<br>- 6: dst_y: y-location of the vector's origin in the current frame (in pixels). Corresponds to the y-center coordinate of the correspdoning macroblock.<br>- 7: motion_x = motion_scale * (src_x - dst_x)<br>- 8: motion_y = motion_scale * (src_y - dst_y)<br>- 9: motion_scale: see definiton of columns 7 and 8. Used to scale up the motion components to integer values. E.g. if motion_scale = 4, motion components can be integer values but encode a float with 1/4 pixel precision. |
+| 1 | frame | numpy array | Array of dtype uint8 shape (h, w, 3) containing the decoded video frame. w and h are the width and height of this frame in pixels. If no frame could be decoded an empty numpy ndarray of shape (0, 0, 3) and dtype uint8 is returned. |
+| 2 | motion vectors | numpy array | Array of dtype int64 and shape (N, 10) containing the N motion vectors of the frame. Each row of the array corresponds to one motion vector. The columns of each vector have the following meaning (also refer to [AVMotionVector](https://ffmpeg.org/doxygen/4.1/structAVMotionVector.html) in FFMPEG documentation): <br>- 0: source: Where the current macroblock comes from. Negative value when it comes from the past, positive value when it comes from the future.<br>- 1: w: Width and height of the vector's macroblock.<br>- 2: h: Height of the vector's macroblock.<br>- 3: src_x: x-location of the vector's origin in source frame (in pixels).<br>- 4: src_y: y-location of the vector's origin in source frame (in pixels).<br>- 5: dst_x: x-location of the vector's destination in the current frame (in pixels).<br>- 6: dst_y: y-location of the vector's destination in the current frame (in pixels).<br>- 7: motion_x: src_x = dst_x + motion_x / motion_scale<br>- 8: motion_y: src_y = dst_y + motion_y / motion_scale<br>- 9: motion_scale: see definiton of columns 7 and 8<br>Note: If no motion vectors are present in a frame, e.g. if the frame is an `I` frame an empty numpy array of shape (0, 10) and dtype int64 is returned. |
 | 3 | frame_type | string | Unicode string representing the type of frame. Can be `"I"` for a keyframe, `"P"` for a frame with references to only past frames and `"B"` for a frame with references to both past and future frames. A `"?"` string indicates an unknown frame type. |
 | 4 | timestamp | double | UTC wall time of each frame in the format of a UNIX timestamp. In case, input is a video file, the timestamp is derived from the system time. If the input is an RTSP stream the timestamp marks the time the frame was send out by the sender (e.g. IP camera). Thus, the timestamp represents the wall time at which the frame was taken rather then the time at which the frame was received. This allows e.g. for accurate synchronization of multiple RTSP streams. In order for this to work, the RTSP sender needs to generate RTCP sender reports which contain a mapping from wall time to stream time. Not all RTSP senders will send sender reports as it is not part of the standard. If IP cameras are used which implement the ONVIF standard, sender reports are always sent and thus timestamps can always be computed. |
 
@@ -233,7 +190,6 @@ Here `T_RTP` is the frame's RTP timestamp and `T_RTP_LAST` and `T_UTC_LAST` are 
 
 Note, that the sender clock needs to be synchronized with a network time server (via NTP) to ensure frame timestamps are in sync with UTC. Most IP cameras provide an option for this.
 
-
 ## About
 
 This software is written by **Lukas Bommes, M.Sc.** - [A*Star SIMTech, Singapore](https://www.a-star.edu.sg/simtech)<br>
@@ -243,20 +199,3 @@ It is based on [MV-Tractus](https://github.com/jishnujayakumar/MV-Tractus/tree/m
 #### License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
-#### Citation
-
-If you use our work for academic research please cite
-
-```
-@INPROCEEDINGS{9248145,
-  author={L. {Bommes} and X. {Lin} and J. {Zhou}},
-  booktitle={2020 15th IEEE Conference on Industrial Electronics and Applications (ICIEA)}, 
-  title={MVmed: Fast Multi-Object Tracking in the Compressed Domain}, 
-  year={2020},
-  volume={},
-  number={},
-  pages={1419-1424},
-  doi={10.1109/ICIEA48937.2020.9248145}}
-```

@@ -248,7 +248,7 @@ bool VideoCap::grab(void) {
 }
 
 
-bool VideoCap::retrieve(uint8_t **frame, int *step, int *width, int *height, int *cn, char *frame_type, MVS_DTYPE **motion_vectors, MVS_DTYPE *num_mvs, double *frame_timestamp) {
+bool VideoCap::retrieve(uint8_t **frame, int *width, int *height, char *frame_type, MVS_DTYPE **motion_vectors, MVS_DTYPE *num_mvs, double *frame_timestamp) {
 
     if (!this->video_stream || !(this->frame->data[0]))
         return false;
@@ -286,8 +286,6 @@ bool VideoCap::retrieve(uint8_t **frame, int *step, int *width, int *height, int
         this->picture.width = this->video_dec_ctx->width;
         this->picture.height = this->video_dec_ctx->height;
         this->picture.data = this->rgb_frame.data[0];
-        this->picture.step = this->rgb_frame.linesize[0];
-        this->picture.cn = 3;
     }
 
     // change color space of frame
@@ -303,8 +301,6 @@ bool VideoCap::retrieve(uint8_t **frame, int *step, int *width, int *height, int
     *frame = this->picture.data;
     *width = this->picture.width;
     *height = this->picture.height;
-    *step = this->picture.step;
-    *cn = this->picture.cn;
 
     // get motion vectors
     AVFrameSideData *sd = av_frame_get_side_data(this->frame, AV_FRAME_DATA_MOTION_VECTORS);
@@ -347,10 +343,10 @@ bool VideoCap::retrieve(uint8_t **frame, int *step, int *width, int *height, int
 }
 
 
-bool VideoCap::read(uint8_t **frame, int *step, int *width, int *height, int *cn, char *frame_type, MVS_DTYPE **motion_vectors, MVS_DTYPE *num_mvs, double *frame_timestamp) {
+bool VideoCap::read(uint8_t **frame, int *width, int *height, char *frame_type, MVS_DTYPE **motion_vectors, MVS_DTYPE *num_mvs, double *frame_timestamp) {
     bool ret = this->grab();
     if (ret)
-        ret = this->retrieve(frame, step, width, height, cn, frame_type, motion_vectors, num_mvs, frame_timestamp);
+        ret = this->retrieve(frame, width, height, frame_type, motion_vectors, num_mvs, frame_timestamp);
     return ret;
 }
 
