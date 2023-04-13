@@ -114,7 +114,7 @@ apt-get -y install \
 FFMPEG_VERSION="4.1.3"
 mkdir -p "$INSTALL_BASE_DIR"/ffmpeg_sources/ffmpeg "$INSTALL_BASE_DIR"/bin
 cd "$INSTALL_BASE_DIR"/ffmpeg_sources
-wget -O --no-check-certificate ffmpeg-snapshot.tar.bz2 https://ffmpeg.org/releases/ffmpeg-"$FFMPEG_VERSION".tar.bz2
+wget --no-check-certificate -O ffmpeg-snapshot.tar.bz2 https://ffmpeg.org/releases/ffmpeg-"$FFMPEG_VERSION".tar.bz2
 tar xjvf ffmpeg-snapshot.tar.bz2 -C "$INSTALL_BASE_DIR"/ffmpeg_sources/ffmpeg --strip-components=1
 rm -rf "$INSTALL_BASE_DIR"/ffmpeg_sources/ffmpeg-snapshot.tar.bz2
 cd "$INSTALL_BASE_DIR"/ffmpeg_sources/ffmpeg
